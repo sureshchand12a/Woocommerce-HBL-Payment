@@ -68,72 +68,7 @@ class WC_Gateway_HBL_Payment extends WC_Payment_Gateway {
 			$this->enabled = 'no';
 		}
 
-		add_action('woocommerce_receipt_' . $this->id, array(&$this, 'woocommerce_confirmation_form'));
-
 		$this->notify_url = WC()->api_request_url( 'WC_Gateway_HBL_Payment' );
-		$this->endpoint = $this->debug ? 'https://core.demo-paco.2c2p.com/api/1.0/Payment/prePaymentUi' : 'https://payment-api.paco.2c2p.com/1.0/Payment/paymentUi';
-	}
-
-	/**
-	 * Order confirmation detail page.
-	 */
-	public function woocommerce_confirmation_form($order_id)
-	{
-		$order = new WC_Order($order_id);
-		$items = $order->get_items();
-
-		$paymentfields = array(
-			'apiRequest'                => array(
-				'requestMessageID' => $this->Guid(),
-				'requestDateTime'  => date( 'Y-m-d\TH:i:s.v\Z' ),
-				'language'         => 'en-US',
-			),
-			'officeId'                  => $this->get_option( 'merchant_id' ),
-			'orderNo'                   => $order->get_order_number(),
-			'productDescription'        => 'product desc.',
-			'paymentType'               => 'CC-VI',
-			'paymentCategory'           => 'ECOM',
-			'storeCardDetails'          => array(
-				'storeCardFlag'      => 'N',
-				'storedCardUniqueID' => '{{guid}}',
-			),
-			'installmentPaymentDetails' => array(
-				'ippFlag'           => 'N',
-				'installmentPeriod' => 0,
-				'interestType'      => null,
-			),
-			'mcpFlag'                   => 'N',
-			'request3dsFlag'            => 'N',
-			'transactionAmount'         => array(
-				'amountText'    => sprintf( '%012d', $order->get_total() * 100 ),
-				'currencyCode'  => $order->get_currency(),
-				'decimalPlaces' => 2,
-				'amount'        => $order->get_total(),
-			),
-			'notificationURLs'          => array(
-				'confirmationURL' => $this->notify_url,
-				'failedURL'       => $this->notify_url,
-				'cancellationURL' => $this->notify_url,
-				'backendURL'      => $this->notify_url,
-			),
-			'purchaseItems'             => array(
-				array(
-					'purchaseItemType'        => 'ticket',
-					'referenceNo'             => $order->get_order_number(),
-					'purchaseItemDescription' => 'Product Description',
-					'purchaseItemPrice'       => array(
-						'amountText'    => sprintf( '%012d', $order->get_total() * 100 ),
-						'currencyCode'  => $order->get_currency(),
-						'decimalPlaces' => 2,
-						'amount'        => $order->get_total(),
-					),
-					'subMerchantID'           => 'string',
-					'passengerSeqNo'          => 1,
-				)
-			)
-		);
-
-		include WOOHBL_PLUGIN_PATH . '/template/payment-form.php'; 
 	}
 
 	/**
@@ -242,11 +177,34 @@ class WC_Gateway_HBL_Payment extends WC_Payment_Gateway {
 	 * @return mixed
 	 */
 	public function process_payment( $order_id ) {
+		include WOOHBL_PLUGIN_PATH . '/src/class-hbl-payment-request.php';
 		$order = wc_get_order( $order_id );
-		return array(
-			'result'   => 'success',
-			'redirect' => $order->get_checkout_payment_url(true)
-		);
+		$request = new \HBLPayment\Request( $this );
+		$result = $request->result( $order );
+
+		
+
+		if ( 
+			isset( $result->apiResponse->responseCode )
+			&& 'PC-B050001' === $result->apiResponse->responseCode 
+			&& isset( $result->data->paymentPage->paymentPageURL )
+		) {
+			return array(
+				'result'   => 'success',
+				'redirect' => $result->data->paymentPage->paymentPageURL
+			);
+		}
+
+		if ( isset( $result->apiResponse->marketingDescription ) ) {
+			wc_add_notice( 'REQ ERROR: ' . esc_html( $result->apiResponse->marketingDescription ) . '. Please follow the <a href="https://sureshchand.com.np/woo-hbl-payment/index.html/#testing" target="_blank">testing & debugging instructions.</a>', 'error' );
+			return;
+		}
+
+		// Something went wrong.
+		wc_add_notice( 'ERROR: Something went wrong. Please follow the <a href="https://sureshchand.com.np/woo-hbl-payment/index.html/#testing" target="_blank">testing & debugging instructions.</a>'  , 'error' );
+
+		// Failed anyway.
+		return; //phpcs:ignore Squiz.PHP.NonExecutableCode.ReturnNotRequired.
 	}
 
 	/**

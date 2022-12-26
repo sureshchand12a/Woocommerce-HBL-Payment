@@ -41,6 +41,19 @@ final class HBL_Payment_class {
 			// Hooks.
 			add_filter( 'woocommerce_payment_gateways', array( $this, 'add_gateway' ) );
 			add_filter( 'plugin_action_links_' . plugin_basename( WOOHBL_PLUGIN_FILE ), array( $this, 'plugin_action_links' ) );
+
+			add_action("parse_request", function( $wp ){
+				if ( 
+					! empty( $wp->query_vars['wc-api'] ) 
+					&& $wp->query_vars['wc-api'] == 'WC_Gateway_HBL_Payment'
+					&& isset($_GET['orderNo']) && !empty($_GET['orderNo'])
+					&& isset($_GET['payment']) && !empty($_GET['payment'])
+				) {
+					require_once WOOHBL_PLUGIN_PATH . '/src/class-hbl-final-payment.php';
+					$finalprocess = \HBLPayment\FinalPayment::get_instance();
+					$finalprocess->process();
+				}
+			}, -1);
 		} else {
 			add_action( 'admin_notices', array( $this, 'woocommerce_missing_notice' ) );
 		}
