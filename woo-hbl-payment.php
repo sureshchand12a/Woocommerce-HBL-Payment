@@ -18,7 +18,7 @@ define( 'WOOHBL_PLUGIN_PATH', __DIR__ );
 define( 'WOOHBL_VERSION', '1.0.0' );
 
 if( !class_exists( "WC_Gateway_HBL_Payment" ) ){
-	require_once WOOHBL_PLUGIN_PATH . '/src/class-hbl-payment.php';
+	require_once WOOHBL_PLUGIN_PATH . '/vendor/autoload.php';
 }
 
 // Initialize the plugin.

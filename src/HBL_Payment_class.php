@@ -49,7 +49,6 @@ final class HBL_Payment_class {
 					&& isset($_GET['orderNo']) && !empty($_GET['orderNo'])
 					&& isset($_GET['payment']) && !empty($_GET['payment'])
 				) {
-					require_once WOOHBL_PLUGIN_PATH . '/src/class-hbl-final-payment.php';
 					$finalprocess = \HBLPayment\FinalPayment::get_instance();
 					$finalprocess->process();
 				}

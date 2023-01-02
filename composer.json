@@ -1,0 +1,20 @@
+{
+    "name": "sureshchand12a/woo-hbl-payment",
+    "type": "project",
+    "authors": [
+        {
+            "name": "Suresh Chand",
+            "email": "sureshchand12a@gmail.com",
+            "homepage": "https://sureshchand.com.np"
+        }
+    ],
+    "require": {
+        "web-token/jwt-framework": "^2.2",
+        "guzzlehttp/guzzle": "^7.0",
+        "nesbot/carbon": "^2.56",
+        "ext-openssl": "*"
+    },
+    "autoload": {
+        "classmap": ["src/"]
+    }
+}

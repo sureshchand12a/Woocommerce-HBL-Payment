@@ -177,15 +177,29 @@ class WC_Gateway_HBL_Payment extends WC_Payment_Gateway {
 	 * @return mixed
 	 */
 	public function process_payment( $order_id ) {
-		include WOOHBL_PLUGIN_PATH . '/src/class-hbl-payment-request.php';
 		$order = wc_get_order( $order_id );
-		$request = new \HBLPayment\Request( $this );
-		$result = $request->result( $order );
 
-		
+		$payment = new \HBLPayment\Payment( );
+		$this->log(wc_print_r($payment->get_key(), true));
+		wc_add_notice( "Please check once", 'error' );
+		return;
+
+		$notifyurl = WC()->api_request_url( 'WC_Gateway_HBL_Payment' ) . "?payment=%s";
+		$result = $payment->ExecuteFormJose(
+			"d64fcd5489eb42bebe46c5fcd0cf19be",
+			"9103332177",
+			"NPR",
+			"100",
+			"N",
+			sprintf($notifyurl, "success"),
+			sprintf($notifyurl, "fail"),
+			sprintf($notifyurl, "cancel"),
+			sprintf($notifyurl, "backend")
+		);
+		$result = json_decode($joseResponse)->response;
 
 		if ( 
-			isset( $result->apiResponse->responseCode )
+			isset( $result->ApiResponse->responseCode )
 			&& 'PC-B050001' === $result->apiResponse->responseCode 
 			&& isset( $result->data->paymentPage->paymentPageURL )
 		) {
@@ -205,28 +219,5 @@ class WC_Gateway_HBL_Payment extends WC_Payment_Gateway {
 
 		// Failed anyway.
 		return; //phpcs:ignore Squiz.PHP.NonExecutableCode.ReturnNotRequired.
-	}
-
-	/**
-	 * Creates a GUID
-	 *
-	 * @since 2.0.0
-	 *
-	 * @return string
-	 */
-	private function Guid() {
-		if ( function_exists( 'com_create_guid' ) ) {
-			return com_create_guid();
-		} else {
-			$charId = strtoupper( md5( uniqid( rand(), true ) ) );
-			$hyphen = chr( 45 );
-			// "-"
-			$guid = substr( $charId, 0, 8 ) . $hyphen
-				. substr( $charId, 8, 4 ) . $hyphen
-				. substr( $charId, 12, 4 ) . $hyphen
-				. substr( $charId, 16, 4 ) . $hyphen
-				. substr( $charId, 20, 12 );
-			return strtolower( $guid );
-		}
 	}
 }
